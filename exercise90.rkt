@@ -1,7 +1,8 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
-#reader(lib "htdp-advanced-reader.ss" "lang")((modname exercise89) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #t #t none #f ())))
+#reader(lib "htdp-advanced-reader.ss" "lang")((modname exercise90) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #t #t none #f ())))
 (require 2htdp/image)
+(require 2htdp/universe)
 (define (tank-render t im)
   (place-image tank-image
                (tank-loc t)
@@ -41,15 +42,15 @@
                                               background)))]))
 (define R 10)
 (define (in-reach? x)
-  (< (if (posn? (abs x))
+  (< (if (posn? x)
          (sqrt(+(sqr(posn-x x))
                 (sqr(posn-y x))))
-         x)
+         (abs x))
      R))
 (define (si-game-over? si)
   (if (aim? si)
       (in-reach? (- (posn-y (aim-ufo si)) height))
-      (and (in-reach? (- (posn-y (fired-ufo si)) height))
+      (or (in-reach? (- (posn-y (fired-ufo si)) height))
            (in-reach? (make-posn (- (posn-x (fired-ufo si)) (posn-x (fired-missile si)))
                                  (- (posn-y (fired-ufo si)) (posn-y (fired-missile si))))))))
 (define (tank-move w)
@@ -77,3 +78,29 @@
 (define-struct fired (ufo tank missile))
 (define background (empty-scene width height))
 (define-struct tank (loc vel))
+(define (change-vel w vel) 
+  (if (aim? w)
+      (make-aim (aim-ufo w) (make-tank (tank-loc(aim-tank w)) vel))
+      (make-fired (fired-ufo w) (make-tank (tank-loc(fired-tank w)) vel) (fired-missile w))))
+(define (get-tank w)
+  (if (aim? w) (aim-tank w) (fired-tank w)))
+(define (get-ufo w)
+  (if (aim? w) (aim-ufo w) (fired-ufo w)))
+(define (si-control w ke)
+  (cond
+    [(string=? ke " ") (if (aim? w)
+                           (make-fired (aim-ufo w)
+                                       (aim-tank w)
+                                       (make-posn (tank-loc(aim-tank w))
+                                                  height))
+                           w)]
+    [(string=? ke "left") (change-vel w (- (abs (tank-vel (get-tank w)))))]
+    [(string=? ke "right") (change-vel w (abs (tank-vel (get-tank w))))]))
+(define (main) 
+  (big-bang (make-aim (make-posn (/ width 2) 0) (make-tank (/ width 2) 3))
+            [to-draw si-render]
+            [on-tick si-move]
+            [stop-when si-game-over?]
+            [on-key si-control]))
+(check-expect (si-game-over? (make-aim (make-posn 100 0) (make-tank 100 3))) false)
+(check-expect (in-reach? (- height)) false)
