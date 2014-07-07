@@ -4,8 +4,8 @@
 (require 2htdp/image)
 (define (tank-render t im)
   (place-image tank-image
-               (posn-x (tank-loc t))
-               (posn-y (tank-loc t))
+               (tank-loc t)
+               height
                im))
 (define (missile-render t im)
   (place-image missile-image
